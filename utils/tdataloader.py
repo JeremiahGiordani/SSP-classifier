@@ -120,17 +120,20 @@ def processing(img, opt):
 
 
 class genImageTrainDataset(Dataset):
-    def __init__(self, image_root, opt):
+    def __init__(self, image_root, opt, fraction=0.1):
         super().__init__()
         self.opt = opt
         self.root = os.path.join(image_root, "train")
         self.nature_path = os.path.join(self.root, "0_real")
         self.nature_list = [os.path.join(self.nature_path, f)
                             for f in os.listdir(self.nature_path)]
+        self.nature_list = random.sample(self.nature_list, int(len(self.nature_list) * fraction))
         self.nature_size = len(self.nature_list)
         self.ai_path = os.path.join(self.root, "1_fake")
         self.ai_list = [os.path.join(self.ai_path, f)
                         for f in os.listdir(self.ai_path)]
+
+        self.ai_list = random.sample(self.ai_list, int(len(self.ai_list) * fraction))
         self.ai_size = len(self.ai_list)
         self.images = self.nature_list + self.ai_list
         self.labels = torch.cat(
