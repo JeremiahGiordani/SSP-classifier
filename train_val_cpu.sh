@@ -1,0 +1,1 @@
+python train_val_cpu.py --blur_prob=0 --jpg_prob=0 --batchsize=20 --epoch=4 --lr=1e-4 --patch_size=32 

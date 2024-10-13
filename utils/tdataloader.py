@@ -124,11 +124,11 @@ class genImageTrainDataset(Dataset):
         super().__init__()
         self.opt = opt
         self.root = os.path.join(image_root, "train")
-        self.nature_path = os.path.join(self.root, "0_real")
+        self.nature_path = self.root
         self.nature_list = [os.path.join(self.nature_path, f)
                             for f in os.listdir(self.nature_path)]
         self.nature_size = len(self.nature_list)
-        self.ai_path = os.path.join(self.root, "1_fake")
+        self.ai_path = self.root
         self.ai_list = [os.path.join(self.ai_path, f)
                         for f in os.listdir(self.ai_path)]
         self.ai_size = len(self.ai_list)
