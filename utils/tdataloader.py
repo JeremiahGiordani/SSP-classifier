@@ -124,11 +124,11 @@ class genImageTrainDataset(Dataset):
         super().__init__()
         self.opt = opt
         self.root = os.path.join(image_root, "train")
-        self.nature_path = self.root
+        self.nature_path = os.path.join(self.root, "0_real")
         self.nature_list = [os.path.join(self.nature_path, f)
                             for f in os.listdir(self.nature_path)]
         self.nature_size = len(self.nature_list)
-        self.ai_path = self.root
+        self.ai_path = os.path.join(self.root, "1_fake")
         self.ai_list = [os.path.join(self.ai_path, f)
                         for f in os.listdir(self.ai_path)]
         self.ai_size = len(self.ai_list)
@@ -163,13 +163,13 @@ class genImageValDataset(Dataset):
         self.opt = opt
         self.root = os.path.join(image_root, "val", image_dir)
         if is_real:
-            self.img_path = os.path.join(self.root, 'nature')
+            self.img_path = self.root
             self.img_list = [os.path.join(self.img_path, f)
                              for f in os.listdir(self.img_path)]
             self.img_len = len(self.img_list)
             self.labels = torch.ones(self.img_len)
         else:
-            self.img_path = os.path.join(self.root, 'ai')
+            self.img_path = self.root
             self.img_list = [os.path.join(self.img_path, f)
                              for f in os.listdir(self.img_path)]
             self.img_len = len(self.img_list)
