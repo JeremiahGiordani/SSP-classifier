@@ -10,10 +10,7 @@ import random as rd
 from random import random, choice
 from scipy.ndimage.filters import gaussian_filter
 from io import BytesIO
-mp = {0: 'imagenet_ai_0508_adm', 1: 'imagenet_ai_0419_biggan', 2: 'imagenet_glide', 3: 'imagenet_midjourney',
-      4: 'imagenet_ai_0419_sdv4', 5: 'imagenet_ai_0424_sdv5', 6: 'imagenet_ai_0419_vqdm', 7: 'imagenet_ai_0424_wukong',
-      8: 'imagenet_DALLE2'
-      }
+
 
 
 def sample_continuous(s):
@@ -123,15 +120,15 @@ def processing(img, opt):
 
 
 class genImageTrainDataset(Dataset):
-    def __init__(self, image_root, image_dir, opt):
+    def __init__(self, image_root, opt):
         super().__init__()
         self.opt = opt
-        self.root = os.path.join(image_root, image_dir, "train")
-        self.nature_path = os.path.join(self.root, "nature")
+        self.root = os.path.join(image_root, "train")
+        self.nature_path = os.path.join(self.root, "0_real")
         self.nature_list = [os.path.join(self.nature_path, f)
                             for f in os.listdir(self.nature_path)]
         self.nature_size = len(self.nature_list)
-        self.ai_path = os.path.join(self.root, "ai")
+        self.ai_path = os.path.join(self.root, "1_fake")
         self.ai_list = [os.path.join(self.ai_path, f)
                         for f in os.listdir(self.ai_path)]
         self.ai_size = len(self.ai_list)
@@ -164,7 +161,7 @@ class genImageValDataset(Dataset):
     def __init__(self, image_root, image_dir, is_real, opt):
         super().__init__()
         self.opt = opt
-        self.root = os.path.join(image_root, image_dir, "val")
+        self.root = os.path.join(image_root, "val", image_dir)
         if is_real:
             self.img_path = os.path.join(self.root, 'nature')
             self.img_list = [os.path.join(self.img_path, f)
@@ -194,15 +191,15 @@ class genImageValDataset(Dataset):
 
 
 class genImageTestDataset(Dataset):
-    def __init__(self, image_root, image_dir, opt):
+    def __init__(self, image_root, opt):
         super().__init__()
         self.opt = opt
-        self.root = os.path.join(image_root, image_dir, "val")
-        self.nature_path = os.path.join(self.root, "nature")
+        self.root = os.path.join(image_root, "test")
+        self.nature_path = os.path.join(self.root, "0_real")
         self.nature_list = [os.path.join(self.nature_path, f)
                             for f in os.listdir(self.nature_path)]
         self.nature_size = len(self.nature_list)
-        self.ai_path = os.path.join(self.root, "ai")
+        self.ai_path = os.path.join(self.root, "1_fake")
         self.ai_list = [os.path.join(self.ai_path, f)
                         for f in os.listdir(self.ai_path)]
         self.ai_size = len(self.ai_list)
@@ -240,119 +237,57 @@ def get_single_loader(opt, image_dir, is_real):
 
 
 def get_val_loader(opt):
-    choices = opt.choices
-    loader = []
-    for i, choice in enumerate(choices):
-        datainfo = dict()
-        if choice == 0 or choice == 1:
-            print("val on:", mp[i])
-            datainfo['name'] = mp[i]
-            datainfo['val_ai_loader'], datainfo['ai_size'] = get_single_loader(
-                opt, datainfo['name'], is_real=False)
-            datainfo['val_nature_loader'], datainfo['nature_size'] = get_single_loader(
-                opt, datainfo['name'], is_real=True)
-            loader.append(datainfo)
-    return loader
+
+    print("Loading validation datasets...")
+
+    # Define paths to 'real' and 'fake' validation sets
+    val_ai_path = "1_fake"
+    val_nature_path = "0_real"
+
+    # Load AI-generated and real images using get_single_loader
+    val_ai_loader, ai_size = get_single_loader(opt, val_ai_path, is_real=False)
+    val_nature_loader, nature_size = get_single_loader(opt, val_nature_path, is_real=True)
+
+    # Prepare loader info to return
+    datainfo = {
+        'name': 'progan_val',
+        'val_ai_loader': val_ai_loader,
+        'ai_size': ai_size,
+        'val_nature_loader': val_nature_loader,
+        'nature_size': nature_size
+    }
+
+    print("Validation datasets loaded successfully!")
+    return [datainfo]
 
 
 def get_loader(opt):
-    choices = opt.choices
     image_root = opt.image_root
 
-    datasets = []
-    if choices[0] == 1:
-        adm_dataset = genImageTrainDataset(
-            image_root, "imagenet_ai_0508_adm", opt=opt)
-        datasets.append(adm_dataset)
-        print("train on: imagenet_ai_0508_adm")
-    if choices[1] == 1:
-        biggan_dataset = genImageTrainDataset(
-            image_root, "imagenet_ai_0419_biggan", opt=opt)
-        datasets.append(biggan_dataset)
-        print("train on: imagenet_ai_0419_biggan")
-    if choices[2] == 1:
-        glide_dataset = genImageTrainDataset(
-            image_root, "imagenet_glide", opt=opt)
-        datasets.append(glide_dataset)
-        print("train on: imagenet_glide")
-    if choices[3] == 1:
-        midjourney_dataset = genImageTrainDataset(
-            image_root, "imagenet_midjourney", opt=opt)
-        datasets.append(midjourney_dataset)
-        print("train on: imagenet_midjourney")
-    if choices[4] == 1:
-        sdv14_dataset = genImageTrainDataset(
-            image_root, "imagenet_ai_0419_sdv4", opt=opt)
-        datasets.append(sdv14_dataset)
-        print("train on: imagenet_ai_0419_sdv4")
-    if choices[5] == 1:
-        sdv15_dataset = genImageTrainDataset(
-            image_root, "imagenet_ai_0424_sdv5", opt=opt)
-        datasets.append(sdv15_dataset)
-        print("train on: imagenet_ai_0424_sdv5")
-    if choices[6] == 1:
-        vqdm_dataset = genImageTrainDataset(
-            image_root, "imagenet_ai_0419_vqdm", opt=opt)
-        datasets.append(vqdm_dataset)
-        print("train on: imagenet_ai_0419_vqdm")
-    if choices[7] == 1:
-        wukong_dataset = genImageTrainDataset(
-            image_root, "imagenet_ai_0424_wukong", opt=opt)
-        datasets.append(wukong_dataset)
-        print("train on: imagenet_ai_0424_wukong")
+    print("Loading datasets...")
+    dataset =  genImageTrainDataset(
+            image_root, opt=opt)
 
-    train_dataset = torch.utils.data.ConcatDataset(datasets)
+    train_dataset = torch.utils.data.ConcatDataset([dataset])
     train_loader = DataLoader(train_dataset, batch_size=opt.batchsize,
                               shuffle=True, num_workers=4, pin_memory=True)
+    
+    print("Datasets loaded successfully!")
     return train_loader
 
 
 def get_test_loader(opt):
-    choices = opt.choices
-    image_root = opt.image_root
-    datasets = []
-    if choices[0] == 2:
-        adm_dataset = genImageTestDataset(
-            image_root, "imagenet_ai_0508_adm", opt=opt)
-        datasets.append(adm_dataset)
-        print("test on: imagenet_ai_0508_adm")
-    if choices[1] == 2:
-        biggan_dataset = genImageTestDataset(
-            image_root, "imagenet_ai_0419_biggan", opt=opt)
-        datasets.append(biggan_dataset)
-        print("test on: imagenet_ai_0419_biggan")
-    if choices[2] == 2:
-        glide_dataset = genImageTestDataset(
-            image_root, "imagenet_glide", opt=opt)
-        datasets.append(glide_dataset)
-        print("test on: imagenet_glide")
-    if choices[3] == 2:
-        midjourney_dataset = genImageTestDataset(
-            image_root, "imagenet_midjourney", opt=opt)
-        datasets.append(midjourney_dataset)
-        print("test on: imagenet_midjourney")
-    if choices[4] == 2:
-        sdv14_dataset = genImageTestDataset(
-            image_root, "imagenet_ai_0419_sdv4", opt=opt)
-        datasets.append(sdv14_dataset)
-        print("test on: imagenet_ai_0419_sdv4")
-    if choices[5] == 2:
-        sdv15_dataset = genImageTestDataset(
-            image_root, "imagenet_ai_0424_sdv5", opt=opt)
-        datasets.append(sdv15_dataset)
-        print("test on: imagenet_ai_0424_sdv5")
-    if choices[6] == 2:
-        vqdm_dataset = genImageTestDataset(
-            image_root, "imagenet_ai_0419_vqdm", opt=opt)
-        datasets.append(vqdm_dataset)
-        print("test on: imagenet_ai_0419_vqdm")
-    if choices[7] == 2:
-        wukong_dataset = genImageTestDataset(
-            image_root, "imagenet_ai_0424_wukong", opt=opt)
-        datasets.append(wukong_dataset)
-        print("test on: imagenet_ai_0424_wukong")
+    image_root = opt.image_root  # Path to './dataset'
 
-    test_dataset = torch.utils.data.ConcatDataset(datasets)
+    print("Loading test datasets...")
+
+
+    # Load AI-generated and real images using genImageTestDataset
+    test_dataset = genImageTestDataset(image_root, opt=opt)
+
+    # Create the DataLoader
     test_loader = DataLoader(test_dataset, batch_size=opt.batchsize,
                              shuffle=True, num_workers=4, pin_memory=True)
+
+    print("Test datasets loaded successfully!")
     return test_loader

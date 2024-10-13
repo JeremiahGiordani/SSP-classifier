@@ -29,7 +29,7 @@ class TrainOptions():
         parser.add_argument('--load', type=str,
                             default=None)
         parser.add_argument('--image_root', type=str,
-                            default='/data/chenjiaxuan/data/genImage')
+                            default='./dataset')
         parser.add_argument('--save_path', type=str,
                             default='./snapshot/sortnet/')
         parser.add_argument('--isPatch', action='store_false')
