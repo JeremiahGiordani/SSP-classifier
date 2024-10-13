@@ -1,49 +1,27 @@
-import requests
 import os
+import shutil
 
-# Hugging Face dataset API endpoint
-DATASET_URL = "https://datasets-server.huggingface.co/rows"
-DATASET_NAME = "saq1b/midjourney-v6.1"
-CONFIG = "default"
-SPLIT = "train"
-OFFSET = 0
-LENGTH = 100  # Adjust as needed to download more files
+def move_png_files(source_dir, target_dir):
+    """Move all PNG files from the source directory to the target directory."""
+    os.makedirs(target_dir, exist_ok=True)  # Create target directory if it doesn't exist
 
-# Function to get dataset rows
-def get_dataset_rows(offset=0, length=100):
-    url = f"{DATASET_URL}?dataset={DATASET_NAME}&config={CONFIG}&split={SPLIT}&offset={offset}&length={length}"
-    response = requests.get(url)
+    # Walk through the source directory and its subdirectories
+    for root, _, files in os.walk(source_dir):
+        for file in files:
+            if file.endswith(".png"):
+                # Construct full file path
+                source_file = os.path.join(root, file)
+                target_file = os.path.join(target_dir, file)
 
-    if response.status_code != 200:
-        raise Exception(f"Failed to fetch dataset rows: {response.status_code}")
+                print(f"Moving {source_file} to {target_file}...")
+                shutil.move(source_file, target_file)
 
-    return response.json()
-
-# Function to download PNG images only
-def download_png_images(rows):
-    os.makedirs("downloaded_images", exist_ok=True)  # Create directory for images
-
-    for row in rows["rows"]:
-        for key, value in row["row"].items():
-            if isinstance(value, str) and value.endswith(".png"):
-                filename = os.path.join("downloaded_images", os.path.basename(value))
-                download_image(value, filename)
-
-# Helper function to download and save an image
-def download_image(url, filename):
-    print(f"Downloading {url} to {filename}...")
-    response = requests.get(url, stream=True)
-
-    if response.status_code == 200:
-        with open(filename, "wb") as f:
-            for chunk in response.iter_content(1024):
-                f.write(chunk)
-    else:
-        print(f"Failed to download {url}: {response.status_code}")
+    print("All PNG files have been moved successfully.")
 
 if __name__ == "__main__":
-    print("Fetching dataset rows...")
-    dataset_rows = get_dataset_rows(OFFSET, LENGTH)
-    print("Starting PNG download...")
-    download_png_images(dataset_rows)
-    print("Download complete.")
+    # Set the source and target directories
+    source_directory = os.path.join(os.getcwd(), "midjourney-v6.1")  # Current directory where the script is running (midjourney-v6.1)
+    target_directory = os.path.join(os.getcwd(), "all_midjourney_images")
+
+    # Move PNG files
+    move_png_files(source_directory, target_directory)

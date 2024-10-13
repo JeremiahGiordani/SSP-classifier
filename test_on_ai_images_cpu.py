@@ -8,7 +8,7 @@ from options import TrainOptions
 
 def load_model(model_path):
     """Load the trained model from a given path."""
-    model = ssp().cuda()
+    model = ssp()
     model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     print(f'Model loaded from {model_path}')
     return model

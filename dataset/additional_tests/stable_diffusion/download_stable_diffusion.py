@@ -1,54 +1,54 @@
-import pandas as pd
-import requests
 import os
-from PIL import Image
 import io
+import requests
+from PIL import Image
 
-# Step 1: Download the parquet file
-def download_parquet(url, output_file):
-    print(f"Downloading {url}...")
+# Define the output directory
+output_dir = "stable_diffusion_images"
+os.makedirs(output_dir, exist_ok=True)
+
+# Hugging Face dataset API endpoint and parameters
+DATASET_URL = "https://datasets-server.huggingface.co/rows"
+DATASET_NAME = "bitmind/stable-diffusion-xl"
+CONFIG = "default"
+SPLIT = "train"
+OFFSET = 0
+LENGTH = 100  # Adjust this as needed
+
+def get_dataset_rows(offset=0, length=100):
+    """Fetch dataset rows from the Hugging Face API."""
+    url = f"{DATASET_URL}?dataset={DATASET_NAME}&config={CONFIG}&split={SPLIT}&offset={offset}&length={length}"
     response = requests.get(url)
-    with open(output_file, 'wb') as f:
-        f.write(response.content)
-    print(f"Downloaded {output_file} successfully!")
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch dataset rows: {response.status_code}")
+    return response.json()
 
-# Step 2: Convert parquet data to images
-def convert_parquet_to_images(parquet_file, output_dir):
-    print(f"Reading {parquet_file}...")
-    # Read parquet data into DataFrame
-    df = pd.read_parquet(parquet_file)
-
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Check if the images are stored as byte strings
-    if 'image' not in df.columns:
-        raise ValueError("The parquet file does not contain an 'image' column.")
-
-    print(f"Saving images to {output_dir}...")
-    for idx, row in df.iterrows():
+def save_images_from_rows(rows):
+    """Process and save images from dataset rows."""
+    for idx, row in enumerate(rows["rows"]):
         try:
-            # Convert the byte data to an image
-            image_data = row['image']
-            img = Image.open(io.BytesIO(image_data))
+            # Inspect the row structure to see what 'image' contains
+            print(f"Row {idx} content: {row}")
 
-            # Save the image as PNG (or another format if preferred)
-            img_path = os.path.join(output_dir, f'image_{idx}.png')
-            img.save(img_path)
-            print(f"Saved {img_path}")
+            # Check if 'image' key exists and contains valid data
+            if 'image' in row['row']:
+                image_url = row['row']['image']['src']  # Adjust this if needed
+                img_data = requests.get(image_url).content
+
+                # Open and save the image
+                img = Image.open(io.BytesIO(img_data))
+                img_path = os.path.join(output_dir, f'image_{idx}.png')
+                img.save(img_path)
+                print(f"Saved {img_path}")
+            else:
+                print(f"No image data found in row {idx}")
+
         except Exception as e:
             print(f"Failed to process row {idx}: {e}")
 
-    print("All images saved successfully!")
-
 if __name__ == "__main__":
-    # Define the download URL and file paths
-    PARQUET_URL = "https://huggingface.co/datasets/bitmind/stable-diffusion-xl/resolve/main/data/train-00000-of-00001.parquet"
-    PARQUET_FILE = "train-00000-of-00001.parquet"
-    OUTPUT_DIR = "stable_diffusion_images"
-
-    # Download the parquet file
-    download_parquet(PARQUET_URL, PARQUET_FILE)
-
-    # Convert parquet data to images
-    convert_parquet_to_images(PARQUET_FILE, OUTPUT_DIR)
+    print("Fetching dataset rows...")
+    dataset_rows = get_dataset_rows(OFFSET, LENGTH)
+    print("Processing and saving images...")
+    save_images_from_rows(dataset_rows)
+    print("All images processed.")
