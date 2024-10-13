@@ -157,11 +157,11 @@ class genImageTrainDataset(Dataset):
         return self.nature_size + self.ai_size
 
 
-class genImageValDataset(Dataset):
-    def __init__(self, image_root, image_dir, is_real, opt):
+class genImageSplitDataset(Dataset):
+    def __init__(self, image_root, subdir, image_dir, is_real, opt):
         super().__init__()
         self.opt = opt
-        self.root = os.path.join(image_root, "val", image_dir)
+        self.root = os.path.join(image_root, subdir, image_dir)
         if is_real:
             self.img_path = self.root
             self.img_list = [os.path.join(self.img_path, f)
@@ -190,50 +190,12 @@ class genImageValDataset(Dataset):
         return self.img_len
 
 
-class genImageTestDataset(Dataset):
-    def __init__(self, image_root, opt):
-        super().__init__()
-        self.opt = opt
-        self.root = os.path.join(image_root, "test")
-        self.nature_path = os.path.join(self.root, "0_real")
-        self.nature_list = [os.path.join(self.nature_path, f)
-                            for f in os.listdir(self.nature_path)]
-        self.nature_size = len(self.nature_list)
-        self.ai_path = os.path.join(self.root, "1_fake")
-        self.ai_list = [os.path.join(self.ai_path, f)
-                        for f in os.listdir(self.ai_path)]
-        self.ai_size = len(self.ai_list)
-        self.images = self.nature_list + self.ai_list
-        self.labels = torch.cat(
-            (torch.ones(self.nature_size), torch.zeros(self.ai_size)))
-
-    def rgb_loader(self, path):
-        with open(path, 'rb') as f:
-            img = Image.open(f)
-            return img.convert('RGB')
-
-    def __getitem__(self, index):
-        try:
-            image = self.rgb_loader(self.images[index])
-            label = self.labels[index]
-        except:
-            new_index = index - 1
-            image = self.rgb_loader(
-                self.images[max(0, new_index)])
-            label = self.labels[max(0, new_index)]
-        image = processing(image, self.opt)
-        return image, label, self.images[index]
-
-    def __len__(self):
-        return self.nature_size + self.ai_size
-
-
-def get_single_loader(opt, image_dir, is_real):
-    val_dataset = genImageValDataset(
-        opt.image_root, image_dir=image_dir, is_real=is_real, opt=opt)
-    val_loader = DataLoader(val_dataset, batch_size=opt.val_batchsize,
+def get_single_loader(opt, subdir, image_dir, is_real):
+    dataset = genImageSplitDataset(
+        opt.image_root, subdir=subdir, image_dir=image_dir, is_real=is_real, opt=opt)
+    loader = DataLoader(dataset, batch_size=opt.val_batchsize,
                             shuffle=False, num_workers=4, pin_memory=True)
-    return val_loader, len(val_dataset)
+    return loader, len(dataset)
 
 
 def get_val_loader(opt):
@@ -245,8 +207,8 @@ def get_val_loader(opt):
     val_nature_path = "0_real"
 
     # Load AI-generated and real images using get_single_loader
-    val_ai_loader, ai_size = get_single_loader(opt, val_ai_path, is_real=False)
-    val_nature_loader, nature_size = get_single_loader(opt, val_nature_path, is_real=True)
+    val_ai_loader, ai_size = get_single_loader(opt, "val", val_ai_path, is_real=False)
+    val_nature_loader, nature_size = get_single_loader(opt, "val",val_nature_path, is_real=True)
 
     # Prepare loader info to return
     datainfo = {
@@ -259,6 +221,31 @@ def get_val_loader(opt):
 
     print("Validation datasets loaded successfully!")
     return [datainfo]
+
+
+def get_test_loader(opt):
+
+    print("Loading validation datasets...")
+
+    # Define paths to 'real' and 'fake' validation sets
+    test_ai_path = "1_fake"
+    test_nature_path = "0_real"
+
+    # Load AI-generated and real images using get_single_loader
+    test_ai_loader, ai_size = get_single_loader(opt, "test", test_ai_path, is_real=False)
+    test_nature_loader, nature_size = get_single_loader(opt, "test",test_nature_path, is_real=True)
+
+    # Prepare loader info to return
+    datainfo = {
+        'name': 'progan_test',
+        'test_ai_loader': test_ai_loader,
+        'ai_size': ai_size,
+        'test_nature_loader': test_nature_loader,
+        'nature_size': nature_size
+    }
+
+    print("Test datasets loaded successfully!")
+    return datainfo
 
 
 def get_loader(opt):
@@ -275,19 +262,3 @@ def get_loader(opt):
     print("Datasets loaded successfully!")
     return train_loader
 
-
-def get_test_loader(opt):
-    image_root = opt.image_root  # Path to './dataset'
-
-    print("Loading test datasets...")
-
-
-    # Load AI-generated and real images using genImageTestDataset
-    test_dataset = genImageTestDataset(image_root, opt=opt)
-
-    # Create the DataLoader
-    test_loader = DataLoader(test_dataset, batch_size=opt.batchsize,
-                             shuffle=True, num_workers=4, pin_memory=True)
-
-    print("Test datasets loaded successfully!")
-    return test_loader

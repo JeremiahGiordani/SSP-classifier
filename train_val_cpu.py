@@ -1,5 +1,6 @@
 import os
 import torch
+from tqdm import tqdm
 from utils.util import set_random_seed, poly_lr
 from utils.tdataloader import get_loader, get_val_loader
 from options import TrainOptions
@@ -39,19 +40,25 @@ def train(train_loader, model, optimizer, epoch, save_path):
     epoch_step = 0
     loss_all = 0
     try:
-        for i, (images, labels) in enumerate(train_loader, start=1):
-            optimizer.zero_grad()
-            preds = model(images).ravel()
-            loss1 = bceLoss()
-            loss = loss1(preds, labels)
-            loss.backward()
-            optimizer.step()
-            step += 1
-            epoch_step += 1
-            loss_all += loss.data
-            if i % 200 == 0 or i == total_step or i == 1:
-                print(
-                    f'{datetime.now()} Epoch [{epoch:03d}/{opt.epoch:03d}], Step [{i:04d}/{total_step:04d}], Total_loss: {loss.data:.4f}')
+        with tqdm(train_loader, unit="batch", total=len(train_loader)) as tepoch:
+            tepoch.set_description(f"Epoch [{epoch}/{opt.epoch}]")
+            
+            for i, (images, labels) in enumerate(tepoch, start=1):
+                optimizer.zero_grad()
+                preds = model(images).ravel()
+                loss1 = bceLoss()
+                loss = loss1(preds, labels)
+                loss.backward()
+                optimizer.step()
+                step += 1
+                epoch_step += 1
+                loss_all += loss.data
+
+                tepoch.set_postfix(loss=loss.item())
+
+                if i % 200 == 0 or i == total_step or i == 1:
+                    print(
+                        f'{datetime.now()} Epoch [{epoch:03d}/{opt.epoch:03d}], Step [{i:04d}/{total_step:04d}], Total_loss: {loss.data:.4f}')
         loss_all /= epoch_step
         if epoch % 50 == 0:
             torch.save(model.state_dict(), save_path +

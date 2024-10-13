@@ -42,10 +42,10 @@ def train(train_loader, model, optimizer, epoch, save_path):
     epoch_step = 0
     loss_all = 0
     try:
-        with tqdm(train_loader, unit="batch") as tepoch:
+        with tqdm(train_loader, unit="batch", total=len(train_loader)) as tepoch:
             tepoch.set_description(f"Epoch [{epoch}/{opt.epoch}]")
 
-            for i, (images, labels) in enumerate(train_loader, start=1):
+            for i, (images, labels) in enumerate(tepoch, start=1):
                 optimizer.zero_grad()
                 images = images.cuda()
                 preds = model(images).ravel()

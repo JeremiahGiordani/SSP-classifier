@@ -8,8 +8,8 @@ from options import TrainOptions
 
 def load_model(model_path):
     """Load the trained model from a given path."""
-    model = ssp().cuda()
-    model.load_state_dict(torch.load(model_path))
+    model = ssp()
+    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     print(f'Model loaded from {model_path}')
     return model
 
@@ -20,7 +20,6 @@ def evaluate(loader, model):
     
     with torch.no_grad():
         for images, labels in tqdm(loader, desc='Testing', unit='batch'):
-            images, labels = images.cuda(), labels.cuda()
             preds = torch.sigmoid(model(images)).ravel()
             correct_images += (((preds > 0.5) & (labels == 1)) |
                                ((preds < 0.5) & (labels == 0))).sum().item()
@@ -63,7 +62,7 @@ if __name__ == '__main__':
     set_random_seed()
 
     # Hard-code the paths for testing
-    TEST_DATASET_PATH = './datasets'  # Change this path if needed
+    TEST_DATASET_PATH = 'dataset'  # Change this path if needed
     MODEL_PATH = 'snapshot/ssp/Net_epoch_best.pth'
 
     # Ensure the model file exists

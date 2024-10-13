@@ -31,7 +31,7 @@ class TrainOptions():
         parser.add_argument('--image_root', type=str,
                             default='./dataset')
         parser.add_argument('--save_path', type=str,
-                            default='./snapshot/sortnet/')
+                            default='./snapshot/ssp/')
         parser.add_argument('--isPatch', action='store_false')
         parser.add_argument('--patch_size', type=int, default=32)
         parser.add_argument('--aug', action='store_false')
